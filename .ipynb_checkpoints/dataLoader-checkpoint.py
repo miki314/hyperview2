@@ -3,6 +3,7 @@ import json
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+import torch
 
 # %% Dataset paths
 DATASET_DIR = Path('./data')
@@ -83,3 +84,47 @@ def get_Xy_train():
     y= np.vstack((y, y_tmp))
 
     return (X,y)
+
+def resize_tensor(x, size=(7, 7)):
+    x = x.unsqueeze(0)
+    x = torch.nn.functional.interpolate(x, size=size, mode='bilinear', align_corners=False)
+    return x.squeeze(0)
+    
+def load_images(dirName, reduce=1):
+    files_train = sorted(dirName.glob("*.npz"))
+    train_data = []
+
+    for _, file_name in enumerate(files_train):
+        with np.load(file_name) as npz:
+            arr = np.ma.MaskedArray(**npz)
+            data = arr.data
+            data = np.append(data, [arr.mask[0]], axis=0)
+            
+            x = torch.tensor(data, dtype=torch.float32)
+            x = resize_tensor(x)  # Shape: (C, 7, 7)
+            train_data.append(x)
+
+    if not train_data:
+        return []
+
+    max_width = max(data.shape[1] for data in train_data)
+    max_height = max(data.shape[2] for data in train_data)
+    max_size = max_width if max_width > max_height else max_height
+
+    if reduce == 1:
+        return [resize_tensor(data) for data in train_data]
+        
+    dataset_tensor = torch.stack(train_data)
+    N, C, H, W = dataset_tensor.shape
+
+    pixels = dataset_tensor.permute(0, 2, 3, 1).reshape(-1, C).numpy()
+
+    pca = PCA(n_components=reduce)
+    reduced_pixels = pca.fit_transform(pixels)
+
+    actual_components = pca.n_components_
+
+    reduced_tensor = torch.tensor(reduced_pixels, dtype=torch.float32)
+    reduced_tensor = reduced_tensor.view(N, H, W, actual_components).permute(0, 3, 1, 2)
+
+    return ([img for img in reduced_tensor], pca)

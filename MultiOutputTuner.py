@@ -119,15 +119,12 @@ class MultiOutputTuner:
             return pickle.load(file)
 
 def score(X_train, y_train, X_test, y_test, model):
-    # Fit the baseline model
     baseline_reg = BaselineRegressor()
     baseline_reg = baseline_reg.fit(X_train, y_train)
     baseline_predictions = baseline_reg.predict(X_test)
 
-    # Generate baseline values to be used in score computation
     baselines = np.mean((y_test - baseline_predictions) ** 2, axis=0)
 
-    # Generate predictions slightly different from baseline predictions
     np.random.seed(0)
     predictions = np.zeros_like(y_test)
     for column_index in range(predictions.shape[1]):
@@ -136,14 +133,11 @@ def score(X_train, y_train, X_test, y_test, model):
                                                          high=class_mean_value + class_mean_value * 0.2,
                                                          size=len(predictions))
 
-    # Calculate MSE for each class
     mse_baseline = np.mean((y_test - predictions) ** 2, axis=0)
     print(f"Baseline mse: {mse_baseline}")
 
-    # Calculate the score for each class individually
     scores_baseline = mse_baseline / baselines
 
-    # Calculate the final score
     final_score = np.mean(scores_baseline)
 
     for score, class_name in zip(scores_baseline, column_names):

@@ -150,7 +150,7 @@ class FusionNN(nn.Module):
         # model_msi_3D = CNN3D(neurons=neurons)
         # model_msi_3D.load_state_dict(torch.load("models/nn/CNN3D_MSI.pt"))
 
-        model_hsi = CNN2D(channels=231, neurons=neurons)
+        model_hsi = CNN2D(channels=231, neurons=neurons) # 3 for PCA
         model_hsi.load_state_dict(torch.load("models/nn/CNN2D_HSI.pt"))
 
         encoders = [model_msi_2D, model_hsi]
